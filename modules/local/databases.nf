@@ -126,6 +126,7 @@ process determine_bracken_length {
         echo "Exiting".
         exit 1
     fi
+    sleep 30s
     """
 }
 
