@@ -195,6 +195,7 @@ process prepareSILVA {
     mv ${params.database_set}/seqid2taxid.map .
     mv ${params.database_set}/taxonomy taxonomy
     mv ${params.database_set}/database${bracken_length}mers.kmer_distrib database/
+    sleep 10s
     """
 }
 
