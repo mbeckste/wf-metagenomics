@@ -27,6 +27,7 @@ process download_reference_ref2taxid {
     mkdir ${database_dir}_db
     mv "${ref_basename}" ${database_dir}_db/
     mv "${ref2taxid_basename}" ${database_dir}_db/
+    sleep 10s
     """
 }
 
@@ -90,6 +91,7 @@ process unpack_download_kraken2_database {
         echo "Exiting".
         exit 1
     fi
+    sleep 10s
     """
 }
 
@@ -165,6 +167,7 @@ process download_unpack_taxonomy {
             echo "Exiting".
             exit 1
     fi
+    sleep 10s
     """
 }
 
