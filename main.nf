@@ -22,6 +22,11 @@ workflow {
     // Ready the optional file
     OPTIONAL = file("$projectDir/data/OPTIONAL_FILE")
 
+    // Workaround: Create store_dir in advance
+    def folder = new File(params.store_dir)
+    if (!folder.exists()) {
+       folder.mkdirs()
+    }
 
     // Checking user parameters
     log.info("Checking inputs.")
