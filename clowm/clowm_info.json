@@ -1,0 +1,15 @@
+{
+  "inputParameters": [
+    "fastq"
+  ],
+  "outputParameters": [
+    "out_dir"
+  ],
+  "exampleParameters": {
+    "fastq": "s3://workflow-exampledata/epi2me-ont-metagenomics/test-data",
+    "database_set": "Standard-8"
+  },
+  "resourceParameters": [
+    "store_dir"
+  ]
+}
