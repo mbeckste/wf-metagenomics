@@ -93,18 +93,21 @@
                     "type": "boolean",
                     "title": "Enable real time processing",
                     "default": false,
+		    "hidden": true,
                     "description": "Enable to continuously watch the input directory for new input files. Reads will be analysed as they appear",
                     "help_text": "This option enables the use of Nextflow\u2019s directory watching feature to constantly monitor input directories for new files. As soon as files are written by an external process Nextflow will begin analysing these files. The workflow will accumulate data over time to produce an updating report."
                 },
                 "batch_size": {
                     "type": "integer",
                     "default": 0,
+		    "hidden": true,
                     "title": "Size of each batch",
                     "description": "Maximum number of sequence records to process in a batch.",
                     "help_text": "Large files will be split such that batch_size records are processed together. Set to 0 to avoid rebatching input files. A value of 32000 is recommended to rebatch large files."
                 },
                 "read_limit": {
                     "type": "integer",
+		    "hidden": true,
                     "title": "Number of reads analysed to stop the workflow",
                     "description": "Stop processing data when a particular number of reads have been analysed. By default the workflow will run indefinitely.",
                     "help_text": "Sets the upper bound on the number of reads that will be analysed before the workflow is automatically stopped and no more data is analysed."
@@ -112,6 +115,7 @@
                 "port": {
                     "type": "integer",
                     "default": 8080,
+		    "hidden": true,
                     "title": "Network port",
                     "description": "Network port for communication between Kraken2 server and clients (available in real time  pipeline).",
                     "help_text": "The workflow uses a server process to handle Kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network port on which the server and clients will communicate."
@@ -119,6 +123,7 @@
                 "host": {
                     "type": "string",
                     "default": "localhost",
+		    "hidden": true,
                     "title": "Network hostname (or IP address)",
                     "description": "Network hostname (or IP address) for communication between Kraken2 server and clients. (See also 'external_kraken2' parameter). (Available in real time  pipeline).",
                     "help_text": "The workflow uses a server process to handle Kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network hostname (or IP address) of the Kraken server."
@@ -126,6 +131,7 @@
                 "external_kraken2": {
                     "type": "boolean",
                     "default": false,
+		    "hidden": true,
                     "title": "External Kraken2 server",
                     "description": "Whether a pre-existing Kraken2 server should be used, rather than creating one as part of the workflow. (Available in real time  pipeline).",
                     "help_text": "By default the workflow assumes that it is running on a single host computer, and further that it should start its own Kraken2 server. It may be desirable to start a Kraken2 server outside of the workflow, in which case this option should be enabled. This option may be used in conjunction with the `host` option to specify that the Kraken2 server is running on a remote computer. "
@@ -133,6 +139,7 @@
                 "server_threads": {
                     "type": "integer",
                     "default": 2,
+		    "hidden": true,
                     "title": "CPU threads used by the Kraken2 server",
                     "description": "Number of CPU threads used by the Kraken2 server for classifying reads. (Available in the real_time pipeline).",
                     "help_text": "For the real-time Kraken2 workflow, this is the number of CPU threads used by the Kraken2 server for classifying reads."
@@ -140,6 +147,7 @@
                 "kraken_clients": {
                     "type": "integer",
                     "default": 2,
+		    "hidden": true,
                     "title": "Clients used by the Kraken2 server",
                     "description": "Number of clients that can connect at once to the Kraken-server for classifying reads. (Available in the real_time pipeline).",
                     "help_text": "For the real-time Kraken2 workflow, this is the number of clients sending reads to the server. It should not be set to more than 4 fewer than the executor CPU limit."
@@ -469,7 +477,7 @@
                     "title": "Disable ping",
                     "default": false,
                     "description": "Enable to prevent sending a workflow ping.",
-                    "hidden": false
+                    "hidden": true
                 },
                 "help": {
                     "type": "boolean",
@@ -536,14 +544,17 @@
             "hidden": true
         },
         "monochrome_logs": {
-            "type": "boolean"
+            "type": "boolean",
+	    "hidden": true
         },
         "validate_params": {
             "type": "boolean",
-            "default": true
+            "default": true,
+	    "hidden": true
         },
         "show_hidden_params": {
-            "type": "boolean"
+            "type": "boolean",
+	    "hidden": true
         }
     }
 }
