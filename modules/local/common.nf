@@ -1,8 +1,11 @@
 import groovy.json.JsonBuilder
 
 
+include { getParams } from '../../lib/common'
+
 process abricateVersion {
     label "amr"
+    publishDir "${params.out_dir}", mode: 'copy', pattern: "versions.txt", overwrite: true
     cpus 1
     memory "2GB"
     input:
@@ -18,6 +21,7 @@ process abricateVersion {
 
 process getVersions {
     label "wfmetagenomics"
+    publishDir "${params.out_dir}", mode: 'copy', pattern: "versions.txt"
     cpus 1
     memory "2GB"
     output:
@@ -34,22 +38,11 @@ process getVersions {
     """
 }
 
-process getParams {
-    label "wfmetagenomics"
-    cpus 1
-    memory "2GB"
-    output:
-        path "params.json"
-    script:
-        def paramsJSON = new JsonBuilder(params).toPrettyString()
-    """
-    # Output nextflow params object to JSON
-    echo '$paramsJSON' > params.json
-    """
-}
 
 process exclude_host_reads {
     label "wfmetagenomics"
+    publishDir "${params.out_dir}/host_bam", mode: 'copy', pattern: "*.host.bam*"
+    publishDir "${params.out_dir}/no_host_bam", mode: 'copy', pattern: "*.unmapped.bam*"
     tag "${meta.alias}"
     cpus params.threads
     // cannot use maxRetries based on exitcodes 137 
@@ -84,6 +77,7 @@ process exclude_host_reads {
         def common_minimap2_opts = (host_reference.size() > 4e9 ) ? common_minimap2_opts + ['--split-prefix tmp'] : common_minimap2_opts
         common_minimap2_opts = common_minimap2_opts.join(" ")
         String fastcat_stats_outdir = "stats_unmapped"
+        def per_read_stats = params.real_time ? "-r >(bgzip -c > $fastcat_stats_outdir/per-read-stats.tsv.gz)" : ""
     // Map reads against the host reference and take the unmapped reads for further analysis
     """
     minimap2 -t $task.cpus ${common_minimap2_opts} -m 50 --secondary=no "${host_reference}" $concat_seqs \
@@ -98,6 +92,7 @@ process exclude_host_reads {
         -s "${sample_id}" \
         -f $fastcat_stats_outdir/per-file-stats.tsv \
         --histograms histograms \
+        ${per_read_stats} \
         "${sample_id}.unmapped.fastq.gz" > /dev/null
     # get number of reads after host removal
     n_seqs_passed_host_depletion=\$(awk 'NR==1{for (i=1; i<=NF; i++) {ix[\$i] = i}} NR>1 {c+=\$ix["n_seqs"]} END{print c}' \
@@ -110,6 +105,7 @@ process exclude_host_reads {
 // Process to collapse lineages info into abundance dataframes.
 process createAbundanceTables {
     label "wfmetagenomics"
+    publishDir "${params.out_dir}", mode: 'copy', pattern: "abundance_table_*.tsv"
     cpus 1
     memory "2GB"
     input:
@@ -132,7 +128,7 @@ process createAbundanceTables {
 // See https://github.com/nextflow-io/nextflow/issues/1636
 // This is the only way to publish files from a workflow whilst
 // decoupling the publish from the process steps.
-process output {
+process publish {
     // publish inputs to output directory
     label "wfmetagenomics"
     cpus 1
@@ -195,14 +191,6 @@ workflow run_common {
                 }
             // Save the passing samples
             samples = branched.pass
-            ch_to_publish = Channel.empty()
-            ch_to_publish = ch_to_publish | mix (
-            reads.host_bam | map { meta, bam, bai -> [bam, "host_bam"]},
-            reads.host_bam | map { meta, bam, bai -> [bai, "host_bam"]},
-            reads.no_host_bam | map { meta, bam, bai -> [bam, "no_host_bam"]},
-            reads.no_host_bam | map { meta, bam, bai -> [bai, "no_host_bam"]},
-            )
-            ch_to_publish | output
         } else{
             samples
         }

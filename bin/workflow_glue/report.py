@@ -17,6 +17,7 @@ import pandas as pd
 import workflow_glue.diversity as diversity
 import workflow_glue.report_utils.report_utils as report_utils
 
+
 from .util import get_named_logger, wf_parser  # noqa: ABS101
 
 # Setup simple globals
@@ -34,8 +35,8 @@ def amr_section(amr_data, html_id):
     for i, (gene, data) in enumerate(amr_data.items()):
         _head = html_tags.h2(id=str(i), style="border: 1px solid rgba(0,0,0,.125);\
                             border-collapse: collapse;\
-                             padding:0;\
-                             margin-bottom:0")
+                            padding:0;\
+                            margin-bottom:0")
         _button = html_tags.button(
             html_tags.span(html_tags.b(gene)),
             html_tags.span(
@@ -424,7 +425,7 @@ def main(args):
                 params = json.load(f)
             amr_db = params["amr_db"].capitalize()
             p(f"""Detection of acquired AMR genes within sample using Abricate
-               with the {amr_db} database.
+                with the {amr_db} database.
             Please note that SNP-mediated AMR cannot be detected.
             """)
             amr_data = report_utils.parse_amr(args.amr)
@@ -441,10 +442,15 @@ def main(args):
     # 5. ALIGNMENT STATS
     #
     if args.align_stats:
+        heatmap_min_cov = 1
         samples_references = {}
         for s in samples:
             samples_references[s] = report_utils.load_alignment_data(
-                args.align_stats, s, args.taxonomic_rank)
+                args.align_stats,
+                s,
+                args.taxonomic_rank,
+                heatmap_min_cov=heatmap_min_cov,
+            )
         # make sure that the samples really have data.
         dataset_results = {k: v for k, v in samples_references.items() if v is not None}
         if len(dataset_results) >= 1:
@@ -479,7 +485,22 @@ def main(args):
                 with tabs.add_dropdown_menu("Heatmap", change_header=False):
                     for barcode, metrics in dataset_results.items():
                         with tabs.add_dropdown_tab(barcode):
-                            EZChart(metrics[2], 'epi2melabs')
+                            if metrics[2]:
+                                p(
+                                    "To illustrate consistency of coverage between ",
+                                    "the reference sequences, each reference is ",
+                                    "divided into 100 evenly sized windows, and the ",
+                                    "average depth across all positions in the window ",
+                                    "is plotted in a cell in the heatmap. Only ",
+                                    f"references with {heatmap_min_cov}% average ",
+                                    "coverage across the entire sequence are included ",
+                                    "in the heatmap."
+                                )
+                                EZChart(metrics[2], 'epi2melabs')
+                            else:
+                                p(
+                                    "No taxa present with sufficient coverage for heatmap."  # noqa:E501
+                                )
     report.write(args.report)
     logger.info(f"Report written to {args.report}.")
 
@@ -496,38 +517,38 @@ def argparser():
         help="sample metadata")
     parser.add_argument(
         "--read_stats",  nargs='+', required=False,
-        help="Fastcat per-read stats, ordered as per entries in --metadata "
-    )
+        help="Fastcat per-read stats, ordered as per entries in --metadata",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         "--lineages", nargs='+', required=True,
-        help="Read lineage file.")
+        help="Read lineage file.",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         "--align_stats", required=False,
-        help="Folder containing the mapping and depth statistics in TSV format.")
+        help="Folder containing the mapping and depth statistics in TSV format.",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         "--abundance_table", required=True,
-        help="Read abundance tsv file.")
+        help="Read abundance tsv file.",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         '--taxonomic_rank', required=True, choices=["S", "G", "k", "F", "O", "C", "P"],
         help="Taxonomic rank.")
     parser.add_argument(
         "--versions", required=True,
-        help="directory containing CSVs containing name,version.")
+        help="directory containing CSVs containing name,version.",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         "--params", default=None, required=True,
-        help="A JSON file containing the workflow parameter key/values")
-    parser.add_argument(
-        "--revision", default='unknown',
-        help="git branch/tag of the executed workflow")
-    parser.add_argument(
-        "--commit", default='unknown',
-        help="git commit of the executed workflow")
+        help="A JSON file containing the workflow parameter key/values",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         "--pipeline", default='kraken2', choices=["kraken2", "minimap2", "real_time"],
         help="kraken2, minimap2 or real_time")
     parser.add_argument(
         "--amr", default=None,
-        help="Path to combined AMR results")
+        help="Path to combined AMR results",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         "--abundance_threshold", default=1, type=float,
         help="Remove those taxa whose abundance is below this cut-off.")

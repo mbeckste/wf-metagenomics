@@ -35,7 +35,7 @@
 
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
-| database_set | string | Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS', 'SILVA_138_1', 'Standard-8', 'PlusPF-8', 'PlusPFP-8']. Memory requirement will be slightly higher than the size of the database. Standard-8, PlusPF-8 and PlusPFP-8 databases require more than 8GB. | This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options. | Standard-8 |
+| database_set | string | Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS', 'SILVA_138_1', 'Standard-8', 'PlusPF-8', 'PlusPFP-8']. Memory requirement will be slightly higher than the size of the database. Standard-8, PlusPF-8 and PlusPFP-8 databases require more than 8GB and are only available in the kraken2 approach. | This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options. | Standard-8 |
 | database | string | Not required but can be used to specifically override Kraken2 database [.tar.gz or Directory]. | By default uses database chosen in database_set parameter. |  |
 | taxonomy | string | Not required but can be used to specifically override taxonomy database. Change the default to use a different taxonomy file  [.tar.gz or directory]. | By default NCBI taxonomy file will be downloaded and used. |  |
 | reference | string | Override the FASTA reference file selected by the database_set parameter. It can be a FASTA format reference sequence collection or a minimap2 MMI format index. | This option should be used in conjunction with the database parameter to specify a custom database. |  |
@@ -48,6 +48,7 @@
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
 | bracken_length | integer | Set the length value Bracken will use | Should be set to the length used to generate the kmer distribution file supplied in the Kraken database input directory. For the default datasets these will be set automatically. ncbi_16s_18s = 1000 , ncbi_16s_18s_28s_ITS = 1000 , PlusPF-8 = 300 |  |
+| bracken_threshold | integer | Set the minimum read threshold Bracken will use to consider a taxon | Bracken will only consider taxa with a read count greater than or equal to this value. | 10 |
 | kraken2_memory_mapping | boolean | Avoids loading database into RAM | Kraken 2 will by default load the database into process-local RAM; this flag will avoid doing so. It may be useful if the available RAM memory is lower than the size of the chosen database. | False |
 | kraken2_confidence | number | Kraken2 Confidence score threshold. Default: 0.0. Valid interval: 0-1 | Apply a threshold to determine if a sequence is classified or unclassified. See the [kraken2 manual section on confidence scoring](https://github.com/DerrickWood/kraken2/wiki/Manual#confidence-scoring) for further details about how it works. | 0.0 |
 
@@ -87,7 +88,7 @@
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
 | out_dir | string | Directory for output of all user-facing files. |  | output |
-| igv | boolean | Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well. |  | False |
+| igv | boolean | Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well. If using a custom reference, this must be a FASTA file and not a minimap2 MMI format index. |  | False |
 | include_read_assignments | boolean | A per sample TSV file that indicates the taxonomy assigned to each sequence. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely. |  | False |
 
 

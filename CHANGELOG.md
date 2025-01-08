@@ -5,6 +5,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [v2.12.1]
+### Changed
+- Reconcile workflow with wf-template v5.3.4
+
+
+## [v2.12.0]
+### Added
+- `bracken_threshold` parameter to adjust bracken minimum read threshold, default 10.
+### Fixed
+- Publish AMR results to the output directory when real time is disabled.
+- Abricate process failure is now correctly caught by the workflow.
+### Changed
+- Reconcile workflow with wf-template v5.3.3
+- Update wf-metagenomics image for improved fastcat/bamstats.
+
+
+## [v2.11.1]
+### Fixed
+- kraken2_client exits with `fastcat_histogram` usage error when using real time pipeline with `exclude_host` option.
+### Changed
+- Reconcile template with v5.3.0 and v5.3.1
+- Significantly improved the performance of report generation when summarising alignment data.
+
+
 ## [v2.11.0]
 ### Fixed
 - Switch to markdown links in the outputs table in the README.

@@ -16,7 +16,6 @@ This workflow can be used for the following:
 
 Additional features:
 + Two different approaches are available: `kraken2` (k-mer based) or `minimap2` (using alignment).
-+ Option to run it in [real time](#311-running-wf-metagenomics-in-real-time): `real_time`.
 + Results include:
     - An abundance table with counts per taxa in all the samples.
     - Interactive sankey and sunburst plots to explore the different identified lineages.
@@ -174,7 +173,7 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
-| database_set | string | Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS', 'SILVA_138_1', 'Standard-8', 'PlusPF-8', 'PlusPFP-8']. Memory requirement will be slightly higher than the size of the database. Standard-8, PlusPF-8 and PlusPFP-8 databases require more than 8GB. | This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options. | Standard-8 |
+| database_set | string | Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS', 'SILVA_138_1', 'Standard-8', 'PlusPF-8', 'PlusPFP-8']. Memory requirement will be slightly higher than the size of the database. Standard-8, PlusPF-8 and PlusPFP-8 databases require more than 8GB and are only available in the kraken2 approach. | This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options. | Standard-8 |
 | database | string | Not required but can be used to specifically override Kraken2 database [.tar.gz or Directory]. | By default uses database chosen in database_set parameter. |  |
 | taxonomy | string | Not required but can be used to specifically override taxonomy database. Change the default to use a different taxonomy file  [.tar.gz or directory]. | By default NCBI taxonomy file will be downloaded and used. |  |
 | reference | string | Override the FASTA reference file selected by the database_set parameter. It can be a FASTA format reference sequence collection or a minimap2 MMI format index. | This option should be used in conjunction with the database parameter to specify a custom database. |  |
@@ -187,6 +186,7 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
 | bracken_length | integer | Set the length value Bracken will use | Should be set to the length used to generate the kmer distribution file supplied in the Kraken database input directory. For the default datasets these will be set automatically. ncbi_16s_18s = 1000 , ncbi_16s_18s_28s_ITS = 1000 , PlusPF-8 = 300 |  |
+| bracken_threshold | integer | Set the minimum read threshold Bracken will use to consider a taxon | Bracken will only consider taxa with a read count greater than or equal to this value. | 10 |
 | kraken2_memory_mapping | boolean | Avoids loading database into RAM | Kraken 2 will by default load the database into process-local RAM; this flag will avoid doing so. It may be useful if the available RAM memory is lower than the size of the chosen database. | False |
 | kraken2_confidence | number | Kraken2 Confidence score threshold. Default: 0.0. Valid interval: 0-1 | Apply a threshold to determine if a sequence is classified or unclassified. See the [kraken2 manual section on confidence scoring](https://github.com/DerrickWood/kraken2/wiki/Manual#confidence-scoring) for further details about how it works. | 0.0 |
 
@@ -226,7 +226,7 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
 | out_dir | string | Directory for output of all user-facing files. |  | output |
-| igv | boolean | Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well. |  | False |
+| igv | boolean | Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well. If using a custom reference, this must be a FASTA file and not a minimap2 MMI format index. |  | False |
 | include_read_assignments | boolean | A per sample TSV file that indicates the taxonomy assigned to each sequence. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely. |  | False |
 
 
@@ -266,7 +266,8 @@ Output files may be aggregated including information for all samples or provided
 | Index of the reduced reference FASTA file | igv_reference/reduced_reference.fasta.gz.fai | Index of the reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
 | GZI index of the reduced reference FASTA file | igv_reference/reduced_reference.fasta.gz.gzi | Index of the reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
 | JSON configuration file for IGV browser | igv.json | JSON configuration file to be loaded in IGV for visualising alignments against the reduced reference. | aggregated |
-| Taxonomic assignment per read. | reads_assignments/{{ alias }}.{{kraken2|minimap2}}.assignments.tsv | TSV file with the taxonomic assignment per read. | per-sample |
+| Taxonomic assignment per read. | reads_assignments/{{ alias }}.*.assignments.tsv | TSV file with the taxonomic assignment per read. | per-sample |
+| FASTQ of the selected taxids. | extracted/{{ alias }}.minimap2.extracted.fastq | FASTQ containing/excluding the reads of the selected taxids. | per-sample |
 
 
 
@@ -295,28 +296,6 @@ There are two different approaches to taxonomic classification:
 
 [Kraken2](https://github.com/DerrickWood/kraken2) provides the fastest method for the taxonomic classification of the reads. Then, [Bracken](https://github.com/jenniferlu717/Bracken) is used to provide an estimate of the species (or the selected taxonomic rank) abundance in the sample.
 
-##### 3.1.1 Running wf-metagenomics in real time
-
-The Kraken2 mode can be used in real-time, allowing the workflow to run parallel with an ongoing sequencing run as read data is being produced by the Oxford Nanopore Technologies sequencing instrument. In this case, [Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) and the user can visualise the classification of reads and species abundances in a real-time updating report.    
-In real-time mode, the workflow processes new input files as they become available in batches of the specified size. Thus, this option cannot be used with a single fastq as input.    
->Note: When using the workflow in real-time, the workflow will run indefinitely until a user interrupts the program (e.g with `ctrl+c` when on the command line). The workflow can be configured to complete automatically after a set number of reads have been analysed using the `read_limit` variable. Once this threshold has been reached, the program will emit a `STOP.fastq.gz` file into the fastq directory, which will instruct the workflow to complete. The "STOP.fastq.gz" file is then deleted.
-
-```
-nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --real_time --batch_size 1000 --read_limit 4000
-```
-
-If running the Kraken2 pipeline **real_time** in a cluster, there are two options to enable the workflow to be able to communicate with the Kraken-server: 
-
-1. Run a Kraken-server separately outside of the workflow.
-2. Submit the workflow job to run on a single node (i.e. running as if on a single local machine).
-
->Notes on CPU resource of Kraken-server and client in the real time workflow
-The real-time subworkflow uses a server process to handle Kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. There are some parameters that may be worth considering to improve the performance of the workflow:
-+ port: The option specifies the local network port on which the server and clients will communicate.
-+ host: Network hostname (or IP address) for communication between Kraken2 server and clients. (See also external_kraken2 parameter).
-+ external_kraken2: Whether a pre-existing Kraken2 server should be used, rather than creating one as part of the workflow. By default the workflow assumes that it is running on a single host computer, and further that it should start its own Kraken2 server. It may be desirable to start a Kraken2 server outside of the workflow (for example to host a large database), in which case this option should be enabled. This option may be used in conjuction with the host option to specify that the Kraken2 server is running on a remote computer.
-+ server_threads: Number of CPU threads used by the Kraken2 server for classifying reads.
-+ kraken_clients: Number of clients that can connect at once to the Kraken-server for classifying reads. It should not be set to more than 4 fewer than the executor CPU limit.
 
 #### 3.2 Using Minimap2
 
@@ -402,6 +381,33 @@ The report also includes the rarefaction curve per sample which displays the mea
 > Note: Within each rank, each named taxon is a unique unit. The counts are the number of reads assigned to that taxon. All `Unknown` sequences are considered as a unique taxon
 
 
+### 6. Running wf-metagenomics in real time
+
+> This feature is only available when using Kraken2 as the classifier. It is somewhat experimental and may not work as expected in all environments.
+
+The Kraken2 mode of the workflow can be used in real-time, allowing the workflow to run parallel with an ongoing sequencing run as read data is being produced by the Oxford Nanopore Technologies sequencing instrument. In this case, [Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) and the user can visualise the classification of reads and species abundances in a real-time updating report.
+In real-time mode, the workflow processes new input files as they become available in batches of the specified size. Thus, this option cannot be used with a single fastq as input.
+
+When using the workflow in real-time, the workflow will run indefinitely until a user interrupts the program (e.g with `ctrl+c` when on the command line). The workflow can be configured to complete automatically after a set number of reads have been analysed using the `read_limit` variable. Once this threshold has been reached, the program will emit a `STOP.fastq.gz` file into the fastq directory, which will instruct the workflow to complete. The "STOP.fastq.gz" file is then deleted.
+
+```
+nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --real_time --batch_size 1000 --read_limit 4000
+```
+
+If running the Kraken2 pipeline **real_time** in a cluster, there are two options to enable the workflow to be able to communicate with the Kraken-server: 
+
+1. Run a Kraken-server separately outside of the workflow.
+2. Submit the workflow job to run on a single node (i.e. running as if on a single local machine).
+
+The real-time subworkflow uses a server process to handle Kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. There are some parameters that may be worth considering to improve the performance of the workflow:
++ port: The option specifies the local network port on which the server and clients will communicate.
++ host: Network hostname (or IP address) for communication between Kraken2 server and clients. (See also external_kraken2 parameter).
++ external_kraken2: Whether a pre-existing Kraken2 server should be used, rather than creating one as part of the workflow. By default the workflow assumes that it is running on a single host computer, and further that it should start its own Kraken2 server. It may be desirable to start a Kraken2 server outside of the workflow (for example to host a large database), in which case this option should be enabled. This option may be used in conjuction with the host option to specify that the Kraken2 server is running on a remote computer.
++ server_threads: Number of CPU threads used by the Kraken2 server for classifying reads.
++ kraken_clients: Number of clients that can connect at once to the Kraken-server for classifying reads. It should not be set to more than 4 fewer than the executor CPU limit.
+
+
+
 
 ## Troubleshooting
 
@@ -409,6 +415,7 @@ The report also includes the rarefaction curve per sample which displays the mea
 + See how to interpret some common nextflow exit codes [here](https://labs.epi2me.io/trouble-shooting/).
 + When using the Minimap2 pipeline with a custom database, you must make sure that the `ref2taxid` and reference files are coherent, as well as the taxonomy database.
 + If your device doesn't have the resources to use large Kraken2 databases (e.g. Standard-8, PlusPF-8 and PlusPFP-8), you can enable `kraken2_memory_mapping` to reduce the amount of memory required.
++ To enable IGV viewer with a custom reference, this must be a FASTA file and not a minimap2 MMI format index.
 
 
 
@@ -423,7 +430,7 @@ If your question is not answered here, please report any issues or suggestions o
     * 16S, 18S, ITS
         * ncbi_16s_18s and ncbi_16s_18s_28s_ITS:  Archaeal, bacterial and fungal 16S/18S and ITS data. There are two databases available using the data from [NCBI]https://www.ncbi.nlm.nih.gov/refseq/targetedloci/)
         * SILVA_138_1: The [SILVA](https://www.arb-silva.de/) database (version 138) is also available. Note that SILVA uses its own set of taxids, which do not match the NCBI taxids. We provide the respective taxdump files, but if you prefer using the NCBI ones, you can create them from the SILVA files ([NCBI](https://www.arb-silva.de/no_cache/download/archive/current/Exports/taxonomy/ncbi/)). As the SILVA database uses genus level, the last taxonomic rank at which the analysis is carried out is genus (`taxonomic_rank G`).
-    * General databases
+    * General databases (available only in kraken2 approaches)
         * Standard-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).
         * PlusPF-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core, protozoa and fungi. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).
         * PlusPFP-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core, protozoa, fungi and plant. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).
